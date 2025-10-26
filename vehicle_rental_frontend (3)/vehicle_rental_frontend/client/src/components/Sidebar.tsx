@@ -31,7 +31,7 @@ export default function Sidebar() {
   ];
 
   const customerNavItems = [
-    { href: "/", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/customer-dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/vehicles", label: "Vehicles", icon: Car },
     { href: "/rentals", label: "Rentals", icon: FileText },
     { href: "/payments", label: "Payments", icon: CreditCard },
