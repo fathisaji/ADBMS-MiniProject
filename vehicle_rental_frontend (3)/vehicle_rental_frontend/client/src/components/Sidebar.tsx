@@ -26,7 +26,6 @@ export default function Sidebar() {
     { href: "/rentals", label: "Rentals", icon: FileText },
     { href: "/payments", label: "Payments", icon: CreditCard },
     { href: "/branches", label: "Branches", icon: MapPin },
-    { href: "/staff", label: "Staff", icon: Users },
     { href: "/maintenance", label: "Maintenance", icon: Wrench },
   ];
 
