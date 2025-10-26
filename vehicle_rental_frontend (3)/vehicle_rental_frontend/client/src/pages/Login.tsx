@@ -1,11 +1,13 @@
 import { useState } from "react";
 import axios from "axios";
 import { useLocation } from "wouter";
+import { useAuthStore } from "@/store/authStore";
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [, setLocation] = useLocation(); // Wouter navigation
+  const { setUser } = useAuthStore();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -14,7 +16,14 @@ export default function Login() {
 
       // Save JWT token and role
       localStorage.setItem("token", res.data.token);
-      localStorage.setItem("role", res.data.role); // ADD THIS
+      localStorage.setItem("role", res.data.role);
+
+      // Set user in Zustand store
+      setUser({
+        userId: res.data.userId, // make sure backend returns this
+        role: res.data.role,
+        fullName: res.data.fullName, // optional
+      });
 
       // Redirect based on role
       if (res.data.role === "CUSTOMER") {

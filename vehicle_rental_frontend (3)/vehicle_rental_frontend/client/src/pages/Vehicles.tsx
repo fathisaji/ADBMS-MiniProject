@@ -281,7 +281,7 @@ export default function Vehicles() {
                   <TableHead>Daily Rate</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
-                </TableRow>
+                </TableRow> 
               </TableHeader>
               <TableBody>
                 {vehicles && vehicles.length > 0 ? (
