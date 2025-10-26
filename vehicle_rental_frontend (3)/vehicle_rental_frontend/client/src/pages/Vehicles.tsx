@@ -291,7 +291,15 @@ export default function Vehicles() {
                       <TableCell>{vehicle.brand}</TableCell>
                       <TableCell>{vehicle.model}</TableCell>
                       <TableCell>{vehicle.registrationNo}</TableCell>
-                      <TableCell>${vehicle.dailyRate.toFixed(2)}</TableCell>
+                      <TableCell>
+                        {vehicle.dailyRate
+                            ? vehicle.dailyRate.toLocaleString("en-LK", {
+                              style: "currency",
+                              currency: "LKR",
+                            })
+                            : "LKR 0.00"}
+                      </TableCell>
+
                       <TableCell>
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-medium ${
