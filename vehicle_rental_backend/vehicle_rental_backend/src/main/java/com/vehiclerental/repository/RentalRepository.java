@@ -15,4 +15,6 @@ public interface RentalRepository extends JpaRepository<Rental, Long> {
 
     // Find rentals by status (e.g. 'Ongoing', 'Completed')
     List<Rental> findByRentalStatus(String status);
+
+    List<Rental> findByCustomerCustomerId(Long customerId);
 }

@@ -35,6 +35,12 @@ public class RentalController {
         }
     }
 
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<Rental>> getByUser(@PathVariable Long userId) {
+        List<Rental> rentals = rentalService.getRentalsByUser(userId);
+        return ResponseEntity.ok(rentals);
+    }
+
     // Create new rental
     @PostMapping
     public ResponseEntity<Rental> createRental(@RequestBody Rental rental) {
@@ -46,6 +52,26 @@ public class RentalController {
     public ResponseEntity<Rental> completeRental(@PathVariable Long id) {
         try {
             return ResponseEntity.ok(rentalService.completeRental(id));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    // Approve a rental (Admin)
+    @PostMapping("/{id}/approve")
+    public ResponseEntity<Rental> approveRental(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(rentalService.approveRental(id));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    // Reject a rental (Admin)
+    @PostMapping("/{id}/reject")
+    public ResponseEntity<Rental> rejectRental(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(rentalService.rejectRental(id));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         }

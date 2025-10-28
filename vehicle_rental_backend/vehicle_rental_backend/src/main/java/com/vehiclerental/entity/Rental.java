@@ -1,14 +1,14 @@
 package com.vehiclerental.entity;
 
-
-
 import jakarta.persistence.*;
 import java.time.LocalDate;
 
 @Entity
 @Table(name = "rental")
 public class Rental {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long rentalId;
 
     @ManyToOne
@@ -28,26 +28,34 @@ public class Rental {
     private Double totalAmount;
 
     @Enumerated(EnumType.STRING)
-    private RentalStatus rentalStatus = RentalStatus.Ongoing;
+    private RentalStatus rentalStatus = RentalStatus.Pending;
 
-    public enum RentalStatus { Ongoing, Completed, Cancelled }
+    public enum RentalStatus { Pending, Ongoing, Completed, Cancelled }
 
     public Rental() {}
-    // getters and setters
+
+    // Getters and Setters
     public Long getRentalId() { return rentalId; }
     public void setRentalId(Long rentalId) { this.rentalId = rentalId; }
+
     public Customer getCustomer() { return customer; }
     public void setCustomer(Customer customer) { this.customer = customer; }
+
     public Vehicle getVehicle() { return vehicle; }
     public void setVehicle(Vehicle vehicle) { this.vehicle = vehicle; }
+
     public Staff getStaff() { return staff; }
     public void setStaff(Staff staff) { this.staff = staff; }
+
     public LocalDate getRentalDate() { return rentalDate; }
     public void setRentalDate(LocalDate rentalDate) { this.rentalDate = rentalDate; }
+
     public LocalDate getReturnDate() { return returnDate; }
     public void setReturnDate(LocalDate returnDate) { this.returnDate = returnDate; }
+
     public Double getTotalAmount() { return totalAmount; }
     public void setTotalAmount(Double totalAmount) { this.totalAmount = totalAmount; }
+
     public RentalStatus getRentalStatus() { return rentalStatus; }
     public void setRentalStatus(RentalStatus rentalStatus) { this.rentalStatus = rentalStatus; }
 }

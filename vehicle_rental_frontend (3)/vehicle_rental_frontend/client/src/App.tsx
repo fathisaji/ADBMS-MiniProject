@@ -18,6 +18,7 @@ import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
 import CustomerDashboard from "@/pages/CustomerDashboard.tsx";
 import CustomerVehicles from "@/pages/CustomerVehicles.tsx";
+import AdminRentals from "@/pages/AdminRentals.tsx";
 
 function ProtectedRoute({ component: Component }: { component: React.FC }) {
   const [, setLocation] = useLocation();
@@ -51,8 +52,9 @@ function Router() {
         <Route path="/dashboard" component={Dashboard} />
         <Route path="/customer-dashboard" component={CustomerDashboard} />
         <Route path="/customer-vehicles" component={CustomerVehicles} />
+        <Route path="/admin-rentals" component={AdminRentals} />
 
-
+        customer-rentals
 
       {/* 404 fallback */}
       <Route component={NotFound} />

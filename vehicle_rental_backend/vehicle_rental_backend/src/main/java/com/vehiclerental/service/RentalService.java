@@ -1,10 +1,15 @@
 package com.vehiclerental.service;
 
 
+import com.vehiclerental.entity.Customer;
 import com.vehiclerental.entity.Rental;
+import com.vehiclerental.entity.Staff;
 import com.vehiclerental.entity.Vehicle;
+import com.vehiclerental.repository.CustomerRepository;
 import com.vehiclerental.repository.RentalRepository;
+import com.vehiclerental.repository.StaffRepository;
 import com.vehiclerental.repository.VehicleRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,6 +18,10 @@ import java.util.List;
 public class RentalService {
     private final RentalRepository rentalRepo;
     private final VehicleRepository vehicleRepo;
+    @Autowired
+    private CustomerRepository customerRepository;
+    @Autowired
+    private StaffRepository staffRepository;
 
     public RentalService(RentalRepository rentalRepo, VehicleRepository vehicleRepo) {
         this.rentalRepo = rentalRepo;
@@ -20,22 +29,38 @@ public class RentalService {
     }
 
     public Rental createRental(Rental rental) {
+        // Load existing customer and staff from DB
+        Customer customer = customerRepository.findById(rental.getCustomer().getCustomerId())
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+        Staff staff = staffRepository.findById(rental.getStaff().getStaffId())
+                .orElseThrow(() -> new RuntimeException("Staff not found"));
+
+        rental.setCustomer(customer);
+        rental.setStaff(staff);
+
+        return rentalRepo.save(rental);
+    }
+
+    public Rental approveRental(Long rentalId) {
+        Rental rental = rentalRepo.findById(rentalId)
+                .orElseThrow(() -> new IllegalArgumentException("Rental not found"));
+
+        rental.setRentalStatus(Rental.RentalStatus.Completed);
+
+        // Make vehicle unavailable while rented
         Vehicle v = rental.getVehicle();
-        if (v == null || v.getVehicleId() == null) {
-            throw new IllegalArgumentException("Vehicle required");
-        }
+        v.setAvailabilityStatus(Vehicle.AvailabilityStatus.Rented);
+        vehicleRepo.save(v);
 
-        Vehicle vehicle = vehicleRepo.findById(v.getVehicleId())
-                .orElseThrow(() -> new IllegalArgumentException("Vehicle not found"));
+        return rentalRepo.save(rental);
+    }
 
-        if (vehicle.getAvailabilityStatus() != Vehicle.AvailabilityStatus.Available) {
-            throw new IllegalStateException("Vehicle is not available");
-        }
+    public Rental rejectRental(Long rentalId) {
+        Rental rental = rentalRepo.findById(rentalId)
+                .orElseThrow(() -> new IllegalArgumentException("Rental not found"));
 
-        vehicle.setAvailabilityStatus(Vehicle.AvailabilityStatus.Rented);
-        vehicleRepo.save(vehicle);
-
-        rental.setRentalStatus(Rental.RentalStatus.Ongoing);
+        rental.setRentalStatus(Rental.RentalStatus.Cancelled);
         return rentalRepo.save(rental);
     }
 
@@ -50,6 +75,11 @@ public class RentalService {
         vehicleRepo.save(v);
         return r;
     }
+
+    public List<Rental> getRentalsByUser(Long userId) {
+        return rentalRepo.findByCustomerCustomerId(userId);
+    }
+
 
     public void deleteRental(Long id) {
         rentalRepo.deleteById(id);

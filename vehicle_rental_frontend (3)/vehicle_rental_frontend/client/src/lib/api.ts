@@ -4,7 +4,7 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
 
 // Helper function to make API calls
-async function apiCall<T>(
+export async function apiCall<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
@@ -100,21 +100,6 @@ export const staffAPI = {
   }),
 };
 
-// ==================== RENTAL ENDPOINTS ====================
-export const rentalAPI = {
-  getAll: () => apiCall<any[]>("/rentals"),
-  getById: (id: number) => apiCall<any>(`/rentals/${id}`),
-  create: (data: any) => apiCall<any>("/rentals", {
-    method: "POST",
-    body: JSON.stringify(data),
-  }),
-  complete: (id: number) => apiCall<any>(`/rentals/${id}/complete`, {
-    method: "POST",
-  }),
-  delete: (id: number) => apiCall<void>(`/rentals/${id}`, {
-    method: "DELETE",
-  }),
-};
 
 // ==================== PAYMENT ENDPOINTS ====================
 export const paymentAPI = {
@@ -132,6 +117,52 @@ export const paymentAPI = {
     method: "DELETE",
   }),
 };
+
+
+export const rentalAPI = {
+  getAll: () => apiCall<any[]>("/rentals"),
+  getById: (id: number) => apiCall<any>(`/rentals/${id}`),
+
+  // ✅ Create new rental request (customer)
+  create: (data: any) => apiCall<any>("/rentals", {
+    method: "POST",
+    body: JSON.stringify(data),
+  }),
+
+  // ✅ Get rentals by customer (used in CustomerRentals page)
+  getByUser: (userId: number) => apiCall<any[]>(`/rentals/user/${userId}`),
+
+  // ✅ Admin approval or rejection of a rental request
+  approve: (id: number) => apiCall<any>(`/rentals/${id}/approve`, {
+    method: "PUT",
+  }),
+  reject: (id: number) => apiCall<any>(`/rentals/${id}/reject`, {
+    method: "PUT",
+  }),
+
+  // ✅ Customer uploads payment proof
+  uploadPaymentProof: (rentalId: number, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return fetch(`${API_BASE_URL}/rentals/${rentalId}/upload-proof`, {
+      method: "POST",
+      body: formData,
+    }).then((res) => {
+      if (!res.ok) throw new Error(`Upload failed: ${res.statusText}`);
+      return res.json();
+    });
+  },
+
+  // ✅ Complete rental (optional, marks as finished)
+  complete: (id: number) => apiCall<any>(`/rentals/${id}/complete`, {
+    method: "POST",
+  }),
+
+  delete: (id: number) => apiCall<void>(`/rentals/${id}`, {
+    method: "DELETE",
+  }),
+};
+
 
 // ==================== MAINTENANCE ENDPOINTS ====================
 export const maintenanceAPI = {

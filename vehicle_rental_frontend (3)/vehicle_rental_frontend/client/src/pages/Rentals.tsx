@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useApi, useMutation } from "@/hooks/useApi";
-import { rentalAPI, customerAPI, vehicleAPI, staffAPI } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,271 +18,198 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { AlertCircle, Loader2, Plus, Trash2, CheckCircle } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
+import { vehicleAPI, rentalAPI } from "@/lib/api"; // ✅ use centralized API layer
+
+// ---------------------- INTERFACES ----------------------
+interface Vehicle {
+  vehicleId: number;
+  brand: string;
+  model: string;
+  registrationNo: string;
+  availabilityStatus: string;
+}
 
 interface Rental {
   rentalId: number;
-  customer?: any;
-  vehicle?: any;
-  staff?: any;
+  vehicle?: Vehicle;
   rentalDate: string;
   returnDate: string;
-  totalAmount: number;
   rentalStatus: string;
+  customer?: any;
 }
 
+// ---------------------- COMPONENT ----------------------
 export default function Rentals() {
   const { user } = useAuthStore();
 
   const [formData, setFormData] = useState<Partial<Rental>>({
     rentalDate: "",
     returnDate: "",
-    totalAmount: 0,
-    rentalStatus: "Ongoing",
+    rentalStatus: "Pending",
   });
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  // Load customers, vehicles, staff
-  const { data: customers } = useApi(() => customerAPI.getAll());
-  const { data: vehicles } = useApi(() => vehicleAPI.getAll());
-  const { data: staff } = useApi(() => staffAPI.getAll());
+  // 🔹 Fetch vehicles
+  const { data: vehicles, loading: loadingVehicles } = useApi<Vehicle[]>(() =>
+      vehicleAPI.getAll()
+  );
 
-  // Rentals data
-  const { data: rentals, loading, error, refetch } = useApi(() => {
-    if (!user) return [];
-    if (user.role === "CUSTOMER") return rentalAPI.getByUser(user.userId);
-    return rentalAPI.getAll();
-  });
+  // 🔹 Fetch rentals depending on user role
+  const { data: rentals, loading, refetch } = useApi<Rental[]>(() =>
+      user?.role === "CUSTOMER"
+          ? rentalAPI.getByUser(user.userId)
+          : rentalAPI.getAll()
+  );
 
+  // 🔹 Create rental mutation
   const createMutation = useMutation((data: any) => rentalAPI.create(data));
-  const deleteMutation = useMutation((id: number) => rentalAPI.delete(id));
-  const completeMutation = useMutation((id: number) => rentalAPI.complete(id));
 
-  // Auto-set customer for CUSTOMER role
-  useEffect(() => {
-    if (user?.role === "CUSTOMER") {
-      setFormData((prev) => ({
-        ...prev,
-        customer: { customerId: user.userId, fullName: user.fullName },
-      }));
-    }
-  }, [user]);
+  // 🔹 Delete rental mutation
+  const deleteMutation = useMutation((id: number) => rentalAPI.delete(id));
 
   if (!user) {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground mt-2">Loading user data...</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Loading user data...
+          </p>
         </div>
     );
   }
 
+  // ---------------------- FORM SUBMIT ----------------------
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Prevent missing customer
-    if (user.role === "ADMIN" && !formData.customer?.customerId) {
-      alert("Please select a customer");
+    if (
+        !formData.vehicle?.vehicleId ||
+        !formData.rentalDate ||
+        !formData.returnDate
+    ) {
+      alert("Please fill all required fields.");
       return;
     }
 
-    // Auto-set customer for CUSTOMER
-    if (user.role === "CUSTOMER") {
-      formData.customer = { customerId: user.userId };
-    }
+    const rentalData = {
+      ...formData,
+      customer: { customerId: user.userId },
+      staff: { staffId: 1 }, // Temporary staff for demo
+      rentalStatus: "Pending",
+    };
 
     try {
-      await createMutation.execute(formData);
+      await createMutation.execute(rentalData);
       setIsDialogOpen(false);
-      setFormData({
-        rentalDate: "",
-        returnDate: "",
-        totalAmount: 0,
-        rentalStatus: "Ongoing",
-        customer: user.role === "CUSTOMER" ? { customerId: user.userId, fullName: user.fullName } : undefined,
-      });
+      setFormData({ rentalDate: "", returnDate: "", rentalStatus: "Pending" });
       refetch();
     } catch (err) {
-      console.error("Failed to save rental:", err);
+      console.error("Failed to create rental:", err);
+      alert("Vehicle is not available or rental could not be created.");
     }
   };
 
+  // ---------------------- DELETE HANDLER ----------------------
   const handleDelete = async (id: number) => {
     if (confirm("Are you sure you want to delete this rental?")) {
-      try {
-        await deleteMutation.execute(id);
-        refetch();
-      } catch (err) {
-        console.error("Failed to delete rental:", err);
-      }
-    }
-  };
-
-  const handleComplete = async (id: number) => {
-    try {
-      await completeMutation.execute(id);
+      await deleteMutation.execute(id);
       refetch();
-    } catch (err) {
-      console.error("Failed to complete rental:", err);
     }
   };
 
-  const formatStatus = (status: string) => {
-    const s = status.toLowerCase();
-    if (s === "ongoing") return "Ongoing";
-    if (s === "completed") return "Completed";
-    return status;
-  };
-
-  const filteredRentals =
-      user.role === "CUSTOMER"
-          ? rentals?.filter((r) => r.customer?.customerId === user.userId) || []
-          : rentals || [];
-
+  // ---------------------- RENDER ----------------------
   return (
       <div className="space-y-6">
+        {/* Header + New Rental Button */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Rentals</h1>
-            <p className="text-muted-foreground mt-2">Manage vehicle rental bookings</p>
+            <h1 className="text-3xl font-bold tracking-tight">My Rentals</h1>
+            <p className="text-muted-foreground mt-2">
+              Request and track your vehicle rentals
+            </p>
           </div>
 
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button
-                  onClick={() => {
-                    setFormData({
-                      rentalDate: "",
-                      returnDate: "",
-                      totalAmount: 0,
-                      rentalStatus: "Ongoing",
-                      customer: user.role === "CUSTOMER" ? { customerId: user.userId, fullName: user.fullName } : undefined,
-                    });
-                  }}
+                  onClick={() =>
+                      setFormData({
+                        rentalDate: "",
+                        returnDate: "",
+                        rentalStatus: "Pending",
+                      })
+                  }
               >
-                <Plus className="mr-2 h-4 w-4" />
-                New Rental
+                <Plus className="mr-2 h-4 w-4" /> New Rental
               </Button>
             </DialogTrigger>
+
+            {/* Rental Form */}
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Create New Rental</DialogTitle>
+                <DialogTitle>Request New Rental</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Customer field */}
-                <div className="space-y-2">
-                  <Label htmlFor="customer">Customer</Label>
-                  {user.role === "CUSTOMER" ? (
-                      <Input
-                          id="customer"
-                          value={formData.customer?.fullName || ""}
-                          readOnly
-                      />
-                  ) : (
-                      <Select
-                          onValueChange={(value) =>
-                              setFormData({ ...formData, customer: { customerId: parseInt(value) } })
-                          }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select customer" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {customers?.map((c: any) => (
-                              <SelectItem key={c.customerId} value={c.customerId}>
-                                {c.fullName}
-                              </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                  )}
-                </div>
-
                 {/* Vehicle Select */}
                 <div className="space-y-2">
                   <Label htmlFor="vehicle">Vehicle</Label>
                   <Select
                       onValueChange={(value) =>
-                          setFormData({ ...formData, vehicle: { vehicleId: parseInt(value) } })
+                          setFormData({
+                            ...formData,
+                            vehicle: { vehicleId: parseInt(value) },
+                          })
                       }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select vehicle" />
                     </SelectTrigger>
                     <SelectContent>
-                      {vehicles
-                          ?.filter((v: any) => v.availabilityStatus === "Available")
-                          .map((v: any) => (
-                              <SelectItem key={v.vehicleId} value={v.vehicleId}>
-                                {v.brand} {v.model} ({v.registrationNo})
-                              </SelectItem>
-                          ))}
+                      {loadingVehicles ? (
+                          <p className="text-center text-gray-400 py-2">
+                            Loading vehicles...
+                          </p>
+                      ) : (
+                          vehicles
+                              ?.filter((v) => v.availabilityStatus === "Available")
+                              .map((v) => (
+                                  <SelectItem
+                                      key={v.vehicleId}
+                                      value={String(v.vehicleId)}
+                                  >
+                                    {v.brand} {v.model} ({v.registrationNo})
+                                  </SelectItem>
+                              ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
 
-                {/* Staff Select */}
-                <div className="space-y-2">
-                  <Label htmlFor="staff">Staff</Label>
-                  <Select
-                      onValueChange={(value) =>
-                          setFormData({ ...formData, staff: { staffId: parseInt(value) } })
-                      }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select staff" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {staff?.map((s: any) => (
-                          <SelectItem key={s.staffId} value={s.staffId}>
-                            {s.fullName}
-                          </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Dates and Amount */}
+                {/* Rental Dates */}
                 <div className="space-y-2">
                   <Label htmlFor="rentalDate">Rental Date</Label>
                   <Input
-                      id="rentalDate"
                       type="date"
+                      id="rentalDate"
                       value={formData.rentalDate || ""}
-                      onChange={(e) => setFormData({ ...formData, rentalDate: e.target.value })}
+                      onChange={(e) =>
+                          setFormData({ ...formData, rentalDate: e.target.value })
+                      }
                       required
                   />
                 </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="returnDate">Return Date</Label>
                   <Input
-                      id="returnDate"
                       type="date"
+                      id="returnDate"
                       value={formData.returnDate || ""}
-                      onChange={(e) => setFormData({ ...formData, returnDate: e.target.value })}
-                      required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="totalAmount">Total Amount ($)</Label>
-                  <Input
-                      id="totalAmount"
-                      type="number"
-                      step="0.01"
-                      value={formData.totalAmount || 0}
                       onChange={(e) =>
-                          setFormData({ ...formData, totalAmount: parseFloat(e.target.value) })
+                          setFormData({ ...formData, returnDate: e.target.value })
                       }
                       required
                   />
@@ -292,11 +218,10 @@ export default function Rentals() {
                 <Button type="submit" disabled={createMutation.loading}>
                   {createMutation.loading ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating...
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Requesting...
                       </>
                   ) : (
-                      "Create Rental"
+                      "Submit Request"
                   )}
                 </Button>
               </form>
@@ -304,81 +229,57 @@ export default function Rentals() {
           </Dialog>
         </div>
 
-        {/* Rentals Table */}
+        {/* Rental List */}
         <Card>
           <CardHeader>
-            <CardTitle>Rental Bookings</CardTitle>
+            <CardTitle>Rental Requests</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Vehicle</TableHead>
-                    <TableHead>Rental Date</TableHead>
-                    <TableHead>Return Date</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredRentals.length > 0 ? (
-                      filteredRentals.map((rental: Rental) => (
-                          <TableRow key={rental.rentalId}>
-                            <TableCell>{rental.customer?.fullName || "N/A"}</TableCell>
-                            <TableCell>
-                              {rental.vehicle?.brand} {rental.vehicle?.model}
-                            </TableCell>
-                            <TableCell>{rental.rentalDate}</TableCell>
-                            <TableCell>{rental.returnDate}</TableCell>
-                            <TableCell>${rental.totalAmount.toFixed(2)}</TableCell>
-                            <TableCell>
+            {loading ? (
+                <p className="text-center text-gray-500 py-4">Loading rentals...</p>
+            ) : rentals && rentals.length > 0 ? (
+                rentals.map((r) => (
+                    <div
+                        key={r.rentalId}
+                        className="border p-3 rounded-lg mb-3 shadow-sm"
+                    >
+                      <p>
+                        <strong>Vehicle:</strong> {r.vehicle?.brand} {r.vehicle?.model}
+                      </p>
+                      <p>
+                        <strong>Rental Period:</strong> {r.rentalDate} → {r.returnDate}
+                      </p>
+                      <p>
+                        <strong>Status:</strong>{" "}
                         <span
-                            className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                formatStatus(rental.rentalStatus) === "Ongoing"
-                                    ? "bg-blue-100 text-blue-800"
-                                    : formatStatus(rental.rentalStatus) === "Completed"
-                                        ? "bg-green-100 text-green-800"
-                                        : "bg-red-100 text-red-800"
+                            className={`font-semibold ${
+                                r.rentalStatus === "Pending"
+                                    ? "text-yellow-600"
+                                    : r.rentalStatus === "Approved"
+                                        ? "text-green-600"
+                                        : "text-gray-500"
                             }`}
                         >
-                          {formatStatus(rental.rentalStatus)}
-                        </span>
-                            </TableCell>
-                            <TableCell className="space-x-2">
-                              {formatStatus(rental.rentalStatus) === "Ongoing" && (
-                                  <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleComplete(rental.rentalId)}
-                                      disabled={completeMutation.loading}
-                                  >
-                                    <CheckCircle className="h-4 w-4" />
-                                  </Button>
-                              )}
-                              <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleDelete(rental.rentalId)}
-                                  disabled={deleteMutation.loading}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                      ))
-                  ) : (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8">
-                          No rentals found
-                        </TableCell>
-                      </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                    {r.rentalStatus}
+                  </span>
+                      </p>
+
+                      <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(r.rentalId)}
+                          disabled={deleteMutation.loading}
+                          className="mt-2"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" /> Delete
+                      </Button>
+                    </div>
+                ))
+            ) : (
+                <p className="text-center text-gray-500 py-4">
+                  No rental requests yet.
+                </p>
+            )}
           </CardContent>
         </Card>
       </div>

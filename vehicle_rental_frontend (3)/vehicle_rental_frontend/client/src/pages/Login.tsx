@@ -20,16 +20,19 @@ export default function Login() {
 
       // Set user in Zustand store
       setUser({
-        userId: res.data.userId, // make sure backend returns this
+        userId: res.data.userId,
         role: res.data.role,
-        fullName: res.data.fullName, // optional
+        fullName: res.data.fullName,
       });
 
-      // Redirect based on role
-      if (res.data.role === "CUSTOMER") {
+      // ✅ Explicit role-based redirect
+      const role = res.data.role?.toUpperCase();
+      if (role === "CUSTOMER") {
         setLocation("/customer-dashboard");
-      } else {
+      } else if (role === "ADMIN") {
         setLocation("/dashboard");
+      } else {
+        alert("Unknown role. Please contact support.");
       }
     } catch (err) {
       console.error(err);
@@ -37,31 +40,33 @@ export default function Login() {
     }
   };
 
-
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-      <form onSubmit={handleLogin} className="bg-white p-6 rounded shadow w-80">
-        <h2 className="text-xl mb-4 text-center font-semibold">Login</h2>
-        <input
-          className="border p-2 w-full mb-3"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-        />
-        <input
-          type="password"
-          className="border p-2 w-full mb-3"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <button type="submit" className="bg-blue-500 text-white w-full p-2 rounded">
-          Login
-        </button>
-        <p className="mt-2 text-center text-sm">
-          Don't have an account? <a href="/signup" className="text-blue-600">Sign up</a>
-        </p>
-      </form>
-    </div>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
+        <form onSubmit={handleLogin} className="bg-white p-6 rounded shadow w-80">
+          <h2 className="text-xl mb-4 text-center font-semibold">Login</h2>
+          <input
+              className="border p-2 w-full mb-3"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+          />
+          <input
+              type="password"
+              className="border p-2 w-full mb-3"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+          />
+          <button type="submit" className="bg-blue-500 text-white w-full p-2 rounded">
+            Login
+          </button>
+          <p className="mt-2 text-center text-sm">
+            Don't have an account?{" "}
+            <a href="/signup" className="text-blue-600">
+              Sign up
+            </a>
+          </p>
+        </form>
+      </div>
   );
 }

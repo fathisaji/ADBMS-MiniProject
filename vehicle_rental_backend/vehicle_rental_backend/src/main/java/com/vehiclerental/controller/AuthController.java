@@ -13,6 +13,7 @@ import com.vehiclerental.util.JwtUtil;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -65,11 +66,29 @@ public class AuthController {
     public ResponseEntity<?> login(@RequestBody User loginRequest) {
         Optional<User> userOpt = userRepository.findByUsername(loginRequest.getUsername());
         if (userOpt.isPresent() && passwordEncoder.matches(loginRequest.getPassword(), userOpt.get().getPassword())) {
-            String token = jwtUtil.generateToken(loginRequest.getUsername());
-            String role = userOpt.get().getRole();
-            return ResponseEntity.ok(Map.of("token", token, "role", role));
+            User user = userOpt.get();
+            String token = jwtUtil.generateToken(user.getUsername());
+            String role = user.getRole();
+
+            Long customerId = null;
+            if ("CUSTOMER".equalsIgnoreCase(role)) {
+                Optional<Customer> customerOpt = customerRepository.findByUsername(user.getUsername());
+                if (customerOpt.isPresent()) {
+                    customerId = customerOpt.get().getCustomerId();
+                }
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("token", token);
+            response.put("role", role);
+            response.put("userId", user.getId());
+            response.put("customerId", customerId);
+
+            return ResponseEntity.ok(response);
         }
         return ResponseEntity.status(401).body("Invalid credentials");
     }
+
+
 
 }
