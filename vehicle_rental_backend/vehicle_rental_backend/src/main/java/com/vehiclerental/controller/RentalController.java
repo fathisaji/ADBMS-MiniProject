@@ -24,6 +24,9 @@ public class RentalController {
         return rentalService.getAllRentals();
     }
 
+
+
+
     // Get rental by ID
     @GetMapping("/{id}")
     public ResponseEntity<Rental> getById(@PathVariable Long id) {
@@ -57,30 +60,22 @@ public class RentalController {
         }
     }
 
-    // Approve a rental (Admin)
-    @PostMapping("/{id}/approve")
-    public ResponseEntity<Rental> approveRental(@PathVariable Long id) {
-        try {
-            return ResponseEntity.ok(rentalService.approveRental(id));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        }
-    }
-
-    // Reject a rental (Admin)
-    @PostMapping("/{id}/reject")
-    public ResponseEntity<Rental> rejectRental(@PathVariable Long id) {
-        try {
-            return ResponseEntity.ok(rentalService.rejectRental(id));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        }
-    }
-
     // Delete a rental
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         rentalService.deleteRental(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}/approve")
+    public ResponseEntity<Rental> approveRental(@PathVariable Long id) {
+        Rental updated = rentalService.updateRentalStatus(id, "Completed");
+        return ResponseEntity.ok(updated);
+    }
+
+    @PutMapping("/{id}/reject")
+    public ResponseEntity<Rental> rejectRental(@PathVariable Long id) {
+        Rental updated = rentalService.updateRentalStatus(id, "Cancelled");
+        return ResponseEntity.ok(updated);
     }
 }
