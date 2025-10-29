@@ -283,7 +283,7 @@ export default function Payments() {
                       <TableCell>
                         {payment.rental?.rentalId || "N/A"}
                       </TableCell>
-                      <TableCell>${payment.amount.toFixed(2)}</TableCell>
+                      <TableCell>LKR {payment.amount.toFixed(2)}</TableCell>
                       <TableCell>{payment.paymentDate}</TableCell>
                       <TableCell>{payment.paymentMethod}</TableCell>
                       <TableCell>

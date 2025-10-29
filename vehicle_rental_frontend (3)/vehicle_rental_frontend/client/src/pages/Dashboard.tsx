@@ -170,7 +170,7 @@ export default function Dashboard() {
           />
           <StatCard
               title="Total Revenue"
-              value={`$${stats.totalRevenue.toFixed(2)}`}
+              value={`LKR ${stats.totalRevenue.toFixed(2)}`}
               description="From all payments"
           />
         </div>

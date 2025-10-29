@@ -214,7 +214,7 @@ export default function Vehicles() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="dailyRate">Daily Rate ($)</Label>
+                <Label htmlFor="dailyRate">Daily Rate (LKR)</Label>
                 <Input
                   id="dailyRate"
                   type="number"
