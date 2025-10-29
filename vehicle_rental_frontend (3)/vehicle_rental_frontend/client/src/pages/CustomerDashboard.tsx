@@ -108,7 +108,7 @@ export default function CustomerDashboard() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 <StatCard title="Total Vehicles" value={stats.totalVehicles} description="Available vehicles" />
                 <StatCard title="Active Rentals" value={stats.activeRentals} description="Your current rentals" />
-                <StatCard title="Total Payments" value={`$${stats.totalPayments.toFixed(2)}`} description="Your payments" />
+                <StatCard title="Total Payments" value={`LKR ${stats.totalPayments.toFixed(2)}`} description="Your payments" />
             </div>
         </div>
     );

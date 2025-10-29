@@ -216,7 +216,7 @@ export default function Maintenance() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="cost">Cost ($)</Label>
+                <Label htmlFor="cost">Cost (LKR)</Label>
                 <Input
                   id="cost"
                   type="number"
