@@ -883,7 +883,7 @@ function CustomerPage({ bankAccounts }: { bankAccounts: BankAccount[] }) {
                   payments.map((p: Payment) => (
                     <TableRow key={p.paymentId}>
                       <TableCell className="font-medium">#{p.paymentId}</TableCell>
-                      <TableCell>#{p.rentalId}</TableCell>
+                      <TableCell>#{p.rental?.rentalId ? `${p.rental.rentalId}` : "N/A"}</TableCell>
                       <TableCell>LKR {(p.amount || 0).toFixed(2)}</TableCell>
                       <TableCell>{p.paymentDate}</TableCell>
                       <TableCell>
@@ -967,7 +967,6 @@ function CustomerPage({ bankAccounts }: { bankAccounts: BankAccount[] }) {
   );
 }
 
-/* ---------- ADMIN PAGE ---------- */
 /* ---------- ADMIN PAGE ---------- */
 function AdminPage({ bankAccounts: initialBankAccounts }: { bankAccounts: BankAccount[] }) {
   const { data: payments, loading: paymentsLoading, error: paymentsError, refetch: refetchPayments } = useApi(() => paymentAPI.getAll());
