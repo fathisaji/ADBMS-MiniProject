@@ -11,7 +11,8 @@ import com.vehiclerental.repository.StaffRepository;
 import com.vehiclerental.repository.VehicleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
+import java.util.Map;
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -116,5 +117,13 @@ public class RentalService {
 
     public List<Rental> getRentalsByUser(Long userId) {
         return rentalRepo.findByCustomerCustomerId(userId);
+    }
+
+    public List<Map<String, Object>> getActiveRentalsView() {
+        return rentalRepo.getActiveRentalsFromView();
+    }
+
+    public Double getCalculatedAmount(int vehicleId, LocalDate rentDate, LocalDate returnDate) {
+        return rentalRepo.calculateRentalAmount(vehicleId, rentDate, returnDate);
     }
 }

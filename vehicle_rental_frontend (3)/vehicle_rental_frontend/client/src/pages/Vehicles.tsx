@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useApi, useMutation } from "@/hooks/useApi";
 import { vehicleAPI } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,9 +42,12 @@ interface Vehicle {
 }
 
 export default function Vehicles() {
-  const { data: vehicles, loading, error, refetch } = useApi(() =>
-    vehicleAPI.getAll()
-  );
+  // --- State for toggle ---
+  const [showAvailableOnly, setShowAvailableOnly] = useState(false);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState<Partial<Vehicle>>({
@@ -64,6 +67,26 @@ export default function Vehicles() {
   );
   const deleteMutation = useMutation((id: number) => vehicleAPI.delete(id));
 
+  // --- Fetch vehicles depending on toggle ---
+  const fetchVehicles = async () => {
+    setLoading(true);
+    try {
+      const data = showAvailableOnly
+        ? await vehicleAPI.getAvailableFromView()
+        : await vehicleAPI.getAll();
+      setVehicles(data);
+      setError(null);
+    } catch (err: any) {
+      console.error(err);
+      setError("Failed to fetch vehicles");
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchVehicles();
+  }, [showAvailableOnly]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -82,7 +105,7 @@ export default function Vehicles() {
         dailyRate: 0,
         availabilityStatus: "Available",
       });
-      refetch();
+      fetchVehicles();
     } catch (err) {
       console.error("Failed to save vehicle:", err);
     }
@@ -98,7 +121,7 @@ export default function Vehicles() {
     if (confirm("Are you sure you want to delete this vehicle?")) {
       try {
         await deleteMutation.execute(id);
-        refetch();
+        fetchVehicles();
       } catch (err) {
         console.error("Failed to delete vehicle:", err);
       }
@@ -136,6 +159,8 @@ export default function Vehicles() {
             Manage your vehicle inventory
           </p>
         </div>
+
+        {/* --- Add Vehicle Button --- */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button
@@ -162,6 +187,7 @@ export default function Vehicles() {
               </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* --- Form Fields --- */}
               <div className="space-y-2">
                 <Label htmlFor="vehicleType">Vehicle Type</Label>
                 <Input
@@ -265,6 +291,23 @@ export default function Vehicles() {
         </Dialog>
       </div>
 
+      {/* --- Toggle Buttons --- */}
+      <div className="flex gap-2 mb-4">
+        <Button
+          variant={!showAvailableOnly ? "default" : "outline"}
+          onClick={() => setShowAvailableOnly(false)}
+        >
+          Show All
+        </Button>
+        <Button
+          variant={showAvailableOnly ? "default" : "outline"}
+          onClick={() => setShowAvailableOnly(true)}
+        >
+          Show Available Only
+        </Button>
+      </div>
+
+      {/* --- Vehicle Table --- */}
       <Card>
         <CardHeader>
           <CardTitle>Vehicle Inventory</CardTitle>
@@ -281,54 +324,64 @@ export default function Vehicles() {
                   <TableHead>Daily Rate</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
-                </TableRow> 
+                </TableRow>
               </TableHeader>
               <TableBody>
                 {vehicles && vehicles.length > 0 ? (
-                  vehicles.map((vehicle: Vehicle) => (
-                    <TableRow key={vehicle.vehicleId}>
-                      <TableCell>{vehicle.vehicleType}</TableCell>
-                      <TableCell>{vehicle.brand}</TableCell>
-                      <TableCell>{vehicle.model}</TableCell>
-                      <TableCell>{vehicle.registrationNo}</TableCell>
+                  vehicles.map((vehicle: any) => (
+                    <TableRow key={vehicle.vehicleId || vehicle.Vehicle_ID}>
                       <TableCell>
-                        {vehicle.dailyRate
-                            ? vehicle.dailyRate.toLocaleString("en-LK", {
-                              style: "currency",
-                              currency: "LKR",
-                            })
-                            : "LKR 0.00"}
+                        {vehicle.vehicleType || vehicle.Vehicle_Type}
                       </TableCell>
-
+                      <TableCell>{vehicle.brand || vehicle.Brand}</TableCell>
+                      <TableCell>{vehicle.model || vehicle.Model}</TableCell>
+                      <TableCell>
+                        {vehicle.registrationNo || "-"}
+                      </TableCell>
+                      <TableCell>
+                        {(vehicle.dailyRate || vehicle.Daily_Rate)?.toLocaleString(
+                          "en-LK",
+                          { style: "currency", currency: "LKR" }
+                        ) || "LKR 0.00"}
+                      </TableCell>
                       <TableCell>
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            vehicle.availabilityStatus === "Available"
+                            (vehicle.availabilityStatus ||
+                              vehicle.Availability_Status) === "Available"
                               ? "bg-green-100 text-green-800"
-                              : vehicle.availabilityStatus === "Rented"
-                                ? "bg-blue-100 text-blue-800"
-                                : "bg-yellow-100 text-yellow-800"
+                              : (vehicle.availabilityStatus ||
+                                  vehicle.Availability_Status) === "Rented"
+                              ? "bg-blue-100 text-blue-800"
+                              : "bg-yellow-100 text-yellow-800"
                           }`}
                         >
-                          {vehicle.availabilityStatus}
+                          {vehicle.availabilityStatus ||
+                            vehicle.Availability_Status}
                         </span>
                       </TableCell>
                       <TableCell className="space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(vehicle)}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDelete(vehicle.vehicleId)}
-                          disabled={deleteMutation.loading}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {!showAvailableOnly && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEdit(vehicle)}
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                handleDelete(vehicle.vehicleId)
+                              }
+                              disabled={deleteMutation.loading}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
@@ -347,4 +400,3 @@ export default function Vehicles() {
     </div>
   );
 }
-

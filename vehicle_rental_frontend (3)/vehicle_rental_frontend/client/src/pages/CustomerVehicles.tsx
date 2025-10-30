@@ -13,14 +13,16 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // ✅ Define vehicle type based on what your VIEW returns
 interface VehicleView {
-    Type: string;
-    Brand: string;
-    Model: string;
-    Registration: string;
-    "Daily Rate": number;
-    "Branch Name": string;
-    Status: string;
+  type: string;
+  brand: string;
+  model: string;
+  registration: string;
+  daily_rate: number;
+  branch_name: string;
+  status: string;
 }
+
+
 
 export default function CustomerVehicles() {
     const [vehicles, setVehicles] = useState<VehicleView[]>([]);
@@ -101,32 +103,26 @@ export default function CustomerVehicles() {
                                 {vehicles.length > 0 ? (
                                     vehicles.map((vehicle, index) => (
                                         <TableRow key={index}>
-                                            <TableCell>{vehicle.Type}</TableCell>
-                                            <TableCell>{vehicle.Brand}</TableCell>
-                                            <TableCell>{vehicle.Model}</TableCell>
-                                            <TableCell>{vehicle.Registration}</TableCell>
-                                            <TableCell>
-                                                {vehicle["Daily Rate"]
-                                                    ? vehicle["Daily Rate"].toLocaleString("en-LK", {
-                                                        style: "currency",
-                                                        currency: "LKR",
-                                                    })
-                                                    : "LKR 0.00"}
-                                            </TableCell>
-                                            <TableCell>{vehicle["Branch Name"]}</TableCell>
-                                            <TableCell>
-                        <span
-                            className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                vehicle.Status === "Available"
-                                    ? "bg-green-100 text-green-800"
-                                    : vehicle.Status === "Rented"
-                                        ? "bg-blue-100 text-blue-800"
-                                        : "bg-yellow-100 text-yellow-800"
-                            }`}
-                        >
-                          {vehicle.Status}
-                        </span>
-                                            </TableCell>
+                                            <TableCell>{vehicle.type}</TableCell>
+<TableCell>{vehicle.brand}</TableCell>
+<TableCell>{vehicle.model}</TableCell>
+<TableCell>{vehicle.registration}</TableCell>
+<TableCell>
+  {vehicle.daily_rate.toLocaleString("en-LK", { style: "currency", currency: "LKR" })}
+</TableCell>
+<TableCell>{vehicle.branch_name}</TableCell>
+<TableCell>
+  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+    vehicle.status === "Available"
+      ? "bg-green-100 text-green-800"
+      : vehicle.status === "Rented"
+        ? "bg-blue-100 text-blue-800"
+        : "bg-yellow-100 text-yellow-800"
+  }`}>
+    {vehicle.status}
+  </span>
+</TableCell>
+
                                         </TableRow>
                                     ))
                                 ) : (
