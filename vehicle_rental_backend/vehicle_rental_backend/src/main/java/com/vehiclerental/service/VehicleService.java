@@ -3,12 +3,15 @@ package com.vehiclerental.service;
 
 import com.vehiclerental.entity.Vehicle;
 import com.vehiclerental.repository.VehicleRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class VehicleService {
+    @Autowired
     private final VehicleRepository vehicleRepo;
 
     public VehicleService(VehicleRepository vehicleRepo) {
@@ -51,5 +54,11 @@ public class VehicleService {
     // ✅ Add this to fix the MaintenanceController error
     public Vehicle save(Vehicle vehicle) {
         return vehicleRepo.save(vehicle);
+    }
+
+
+
+    public List<Map<String, Object>> getVehicleView() {
+        return vehicleRepo.getVehicleViewData();
     }
 }

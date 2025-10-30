@@ -4,6 +4,7 @@ package com.vehiclerental.controller;
 
 import com.vehiclerental.entity.Vehicle;
 import com.vehiclerental.service.VehicleService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,6 +13,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/vehicles")
 public class VehicleController {
+    @Autowired
     private final VehicleService vehicleService;
 
     public VehicleController(VehicleService vehicleService) {
@@ -58,5 +60,11 @@ public class VehicleController {
     @GetMapping("/available")
     public List<Vehicle> getAvailable() {
         return vehicleService.getAvailableVehicles();
+    }
+
+
+    @GetMapping("/view")
+    public ResponseEntity<?> getVehicleView() {
+        return ResponseEntity.ok(vehicleService.getVehicleView());
     }
 }
