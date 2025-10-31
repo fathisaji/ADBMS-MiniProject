@@ -117,4 +117,6 @@ public class RentalService {
     public List<Rental> getRentalsByUser(Long userId) {
         return rentalRepo.findByCustomerCustomerId(userId);
     }
+
+
 }

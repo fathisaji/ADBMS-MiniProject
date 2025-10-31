@@ -2,7 +2,8 @@ import { useApi, useMutation } from "@/hooks/useApi";
 import { rentalAPI } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, CheckCircle, XCircle } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, History } from "lucide-react";
+import { useLocation } from "wouter";
 
 interface Vehicle {
     vehicleId: number;
@@ -37,6 +38,8 @@ export default function AdminRentals() {
         refetch();
     };
 
+    const [, setLocation] = useLocation();
+
     if (loading) {
         return (
             <div className="flex items-center justify-center h-40">
@@ -47,7 +50,13 @@ export default function AdminRentals() {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold tracking-tight">Manage Rentals</h1>
+            <div className="flex justify-between items-center">
+                <h1 className="text-3xl font-bold tracking-tight">Manage Rentals</h1>
+                <Button onClick={() => setLocation("/rental-audit")} variant="outline">
+                    <History className="mr-2 h-4 w-4" /> Rental History
+                </Button>
+            </div>
+
             <Card>
                 <CardHeader>
                     <CardTitle>Rental Requests</CardTitle>

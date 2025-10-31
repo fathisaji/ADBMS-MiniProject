@@ -11,7 +11,7 @@ import {
 import { Loader2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-// ✅ Define RentalAudit type based on backend view or table
+// Match the field names exactly as returned by your view
 interface RentalAuditView {
     id: number;
     rentalId: number;
@@ -20,17 +20,17 @@ interface RentalAuditView {
     changedAt: string;
 }
 
+
 export default function RentalAuditHistory() {
     const [audits, setAudits] = useState<RentalAuditView[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // ✅ Fetch data from backend
     useEffect(() => {
         const fetchAuditData = async () => {
             try {
                 const response = await fetch(
-                    `${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api/rentals/audit`
+                    `${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api/rentals/audit/view`
                 );
                 if (!response.ok) throw new Error("Failed to fetch rental audit data");
                 const data = await response.json();

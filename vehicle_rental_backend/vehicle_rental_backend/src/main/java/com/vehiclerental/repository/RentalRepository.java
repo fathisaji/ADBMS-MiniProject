@@ -2,6 +2,7 @@ package com.vehiclerental.repository;
 
 
 import com.vehiclerental.entity.Rental;
+import com.vehiclerental.entity.RentalAudit;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -17,4 +18,6 @@ public interface RentalRepository extends JpaRepository<Rental, Long> {
     List<Rental> findByRentalStatus(String status);
 
     List<Rental> findByCustomerCustomerId(Long customerId);
+
+
 }
