@@ -216,7 +216,7 @@ export default function Maintenance() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="cost">Cost ($)</Label>
+                <Label htmlFor="cost">Cost (LKR)</Label>
                 <Input
                   id="cost"
                   type="number"
@@ -289,7 +289,7 @@ export default function Maintenance() {
                         {record.vehicle?.brand} {record.vehicle?.model}
                       </TableCell>
                       <TableCell>{record.maintenanceDate}</TableCell>
-                      <TableCell>${record.cost.toFixed(2)}</TableCell>
+                      <TableCell>{`LKR ${record.cost.toFixed(2)}`}</TableCell>
                       <TableCell>{record.nextServiceDate}</TableCell>
                       <TableCell className="max-w-xs truncate">
                         {record.description}

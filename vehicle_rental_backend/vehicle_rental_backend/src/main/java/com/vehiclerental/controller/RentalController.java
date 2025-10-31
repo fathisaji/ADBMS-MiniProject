@@ -3,10 +3,14 @@ package com.vehiclerental.controller;
 
 import com.vehiclerental.entity.Rental;
 import com.vehiclerental.service.RentalService;
+
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/rentals")
@@ -77,5 +81,20 @@ public class RentalController {
     public ResponseEntity<Rental> rejectRental(@PathVariable Long id) {
         Rental updated = rentalService.updateRentalStatus(id, "Cancelled");
         return ResponseEntity.ok(updated);
+    }
+
+     @GetMapping("/active-view")
+    public ResponseEntity<List<Map<String, Object>>> getActiveRentalsView() {
+        return ResponseEntity.ok(rentalService.getActiveRentalsView());
+    }
+
+    @GetMapping("/calculate")
+    public ResponseEntity<Double> calculateRentalAmount(
+            @RequestParam int vehicleId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate rentDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate returnDate) {
+
+        Double amount = rentalService.getCalculatedAmount(vehicleId, rentDate, returnDate);
+        return ResponseEntity.ok(amount);
     }
 }

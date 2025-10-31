@@ -1,5 +1,4 @@
-import { useApi } from "@/hooks/useApi";
-import { vehicleAPI } from "@/lib/api";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     Table,
@@ -12,18 +11,44 @@ import {
 import { Loader2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-interface Vehicle {
-    vehicleId: number;
-    vehicleType: string;
-    brand: string;
-    model: string;
-    registrationNo: string;
-    dailyRate: number;
-    availabilityStatus: string;
+// ✅ Define vehicle type based on what your VIEW returns
+interface VehicleView {
+  type: string;
+  brand: string;
+  model: string;
+  registration: string;
+  daily_rate: number;
+  branch_name: string;
+  status: string;
 }
 
+
+
 export default function CustomerVehicles() {
-    const { data: vehicles, loading, error } = useApi(() => vehicleAPI.getAll());
+    const [vehicles, setVehicles] = useState<VehicleView[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    // ✅ Fetch data directly from backend view endpoint
+    useEffect(() => {
+        const fetchVehicleView = async () => {
+            try {
+                const response = await fetch(
+                    `${import.meta.env.VITE_API_URL || "http://localhost:8080"}/api/vehicles/view`
+                );
+                if (!response.ok) throw new Error("Failed to fetch vehicle data from view");
+
+                const data = await response.json();
+                setVehicles(data);
+            } catch (err: any) {
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchVehicleView();
+    }, []);
 
     if (loading) {
         return (
@@ -48,7 +73,7 @@ export default function CustomerVehicles() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 p-6">
             <div>
                 <h1 className="text-3xl font-bold tracking-tight">Available Vehicles</h1>
                 <p className="text-muted-foreground mt-2">
@@ -70,44 +95,40 @@ export default function CustomerVehicles() {
                                     <TableHead>Model</TableHead>
                                     <TableHead>Registration</TableHead>
                                     <TableHead>Daily Rate</TableHead>
+                                    <TableHead>Branch</TableHead>
                                     <TableHead>Status</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {vehicles && vehicles.length > 0 ? (
-                                    vehicles.map((vehicle: Vehicle) => (
-                                        <TableRow key={vehicle.vehicleId}>
-                                            <TableCell>{vehicle.vehicleType}</TableCell>
-                                            <TableCell>{vehicle.brand}</TableCell>
-                                            <TableCell>{vehicle.model}</TableCell>
-                                            <TableCell>{vehicle.registrationNo}</TableCell>
-                                            <TableCell>
-                                                {vehicle.dailyRate
-                                                    ? vehicle.dailyRate.toLocaleString("en-LK", {
-                                                        style: "currency",
-                                                        currency: "LKR",
-                                                    })
-                                                    : "LKR 0.00"}
-                                            </TableCell>
-                                            <TableCell>
-                        <span
-                            className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                vehicle.availabilityStatus === "Available"
-                                    ? "bg-green-100 text-green-800"
-                                    : vehicle.availabilityStatus === "Rented"
-                                        ? "bg-blue-100 text-blue-800"
-                                        : "bg-yellow-100 text-yellow-800"
-                            }`}
-                        >
-                          {vehicle.availabilityStatus}
-                        </span>
-                                            </TableCell>
+                                {vehicles.length > 0 ? (
+                                    vehicles.map((vehicle, index) => (
+                                        <TableRow key={index}>
+                                            <TableCell>{vehicle.type}</TableCell>
+<TableCell>{vehicle.brand}</TableCell>
+<TableCell>{vehicle.model}</TableCell>
+<TableCell>{vehicle.registration}</TableCell>
+<TableCell>
+  {vehicle.daily_rate.toLocaleString("en-LK", { style: "currency", currency: "LKR" })}
+</TableCell>
+<TableCell>{vehicle.branch_name}</TableCell>
+<TableCell>
+  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+    vehicle.status === "Available"
+      ? "bg-green-100 text-green-800"
+      : vehicle.status === "Rented"
+        ? "bg-blue-100 text-blue-800"
+        : "bg-yellow-100 text-yellow-800"
+  }`}>
+    {vehicle.status}
+  </span>
+</TableCell>
+
                                         </TableRow>
                                     ))
                                 ) : (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="text-center py-8">
-                                            No vehicles available at the moment
+                                        <TableCell colSpan={7} className="text-center text-muted-foreground">
+                                            No vehicles found.
                                         </TableCell>
                                     </TableRow>
                                 )}

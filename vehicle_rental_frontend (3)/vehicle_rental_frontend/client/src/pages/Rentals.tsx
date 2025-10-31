@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useApi, useMutation } from "@/hooks/useApi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+
 import {
   Dialog,
   DialogContent,
@@ -25,10 +26,10 @@ import { vehicleAPI, rentalAPI, paymentAPI } from "@/lib/api";
 // ---------------------- INTERFACES ----------------------
 interface Vehicle {
   vehicleId: number;
-  brand: string;
-  model: string;
-  registrationNo: string;
-  availabilityStatus: string;
+  brand?: string;
+  model?: string;
+  registrationNo?: string;
+  availabilityStatus?: string;
 }
 
 interface Rental {
@@ -40,17 +41,30 @@ interface Rental {
   customer?: any;
 }
 
+interface CompletedRental {
+  Rental_ID: number;
+  Customer_Name: string;
+  Brand: string;
+  Model: string;
+  Rental_Date: string;
+  Return_Date: string;
+  Total_Amount: number;
+  Rental_Status: string;
+}
+
 // ---------------------- COMPONENT ----------------------
 export default function Rentals() {
   const { user } = useAuthStore();
 
   const [formData, setFormData] = useState<Partial<Rental>>({
-    rentalDate: "",
-    returnDate: "",
-    rentalStatus: "Pending",
-  });
+  rentalDate: "",
+  returnDate: "",
+  rentalStatus: "Pending",
+});
+const [totalAmount, setTotalAmount] = useState<number | null>(null);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"my" | "completed">("my");
 
   // 🔹 Fetch vehicles
   const { data: vehicles, loading: loadingVehicles } = useApi<Vehicle[]>(() =>

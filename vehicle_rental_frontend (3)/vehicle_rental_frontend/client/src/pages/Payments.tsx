@@ -177,7 +177,7 @@ function BankAccountManager({ bankAccounts, onUpdate }: { bankAccounts: BankAcco
   };
 
   return (
-    <Card className="">
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Landmark className="h-5 w-5" />
@@ -662,44 +662,31 @@ function CustomerPage({ bankAccounts }: { bankAccounts: BankAccount[] }) {
 
   const createMutation = useMutation((data: any) => paymentAPI.create(data));
 
-const handleSubmitPayment = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!selectedRental || !slipFile) return alert("Select rental & upload slip");
-  
-  try {
-    // Create FormData instead of JSON
-    const formData = new FormData();
+  const handleSubmitPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRental || !slipFile) return alert("Select rental & upload slip");
     
-    // Add payment data as JSON string
-    const paymentData = {
-      rentalId: selectedRental.rentalId,
-      amount: selectedRental.totalAmount || 0,
-      paymentMethod: "Online",
-      paymentStatus: "Pending",
-      paymentDate: new Date().toISOString().split("T")[0],
-      transactionId: transactionId || undefined,
-      paymentDetails: details || undefined,
-    };
-    
-    formData.append("payment", new Blob([JSON.stringify(paymentData)], {
-      type: "application/json"
-    }));
-    
-    // Add the file
-    formData.append("slipFile", slipFile);
-
-    await createMutation.execute(formData);
-    setDialogOpen(false);
-    setSelectedRental(null);
-    setSlipFile(null);
-    setDetails("");
-    setTransactionId("");
-    refetch();
-    alert("Payment submitted! Admin will verify the slip and update the status soon.");
-  } catch (err: any) {
-    alert(err.message || "Submit failed");
-  }
-};
+    try {
+      await createMutation.execute({
+        rentalId: selectedRental.rentalId,
+        amount: selectedRental.totalAmount || 0,
+        paymentMethod: "Online",
+        paymentStatus: "Pending",
+        paymentDate: new Date().toISOString().split("T")[0],
+        transactionId: transactionId || undefined,
+        paymentDetails: details || undefined,
+      });
+      setDialogOpen(false);
+      setSelectedRental(null);
+      setSlipFile(null);
+      setDetails("");
+      setTransactionId("");
+      refetch();
+      alert("Payment submitted! Admin will verify the slip and update the status soon.");
+    } catch (err: any) {
+      alert(err.message || "Submit failed");
+    }
+  };
 
   const viewPayment = (p: Payment) => {
     setSelectedPayment(p);

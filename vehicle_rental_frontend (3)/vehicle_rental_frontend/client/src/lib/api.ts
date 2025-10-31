@@ -47,6 +47,8 @@ export const vehicleAPI = {
     method: "DELETE",
   }),
   getAvailable: () => apiCall<any[]>("/vehicles/available"),
+  getAvailableFromView: () => apiCall<any[]>("/vehicles/available-view"),
+  
 };
 
 // ==================== BRANCH ENDPOINTS ====================
@@ -256,6 +258,11 @@ export const rentalAPI = {
   delete: (id: number) => apiCall<void>(`/rentals/${id}`, {
     method: "DELETE",
   }),
+  // ✅ Fetch completed rentals from SQL View
+getActiveFromView: () => apiCall<any[]>("/rentals/active-view"),
+  calculateAmount: (vehicleId: number, rentDate: string, returnDate: string) =>
+  apiCall<number>(`/rentals/calculate-amount?vehicleId=${vehicleId}&rentDate=${rentDate}&returnDate=${returnDate}`),
+
 };
 
 
