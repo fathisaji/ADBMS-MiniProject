@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/vehicles")
@@ -67,4 +68,10 @@ public class VehicleController {
     public ResponseEntity<?> getVehicleView() {
         return ResponseEntity.ok(vehicleService.getVehicleView());
     }
+
+    @GetMapping("/available-view")
+public ResponseEntity<List<Map<String, Object>>> getAvailableVehiclesView() {
+    return ResponseEntity.ok(vehicleService.getAvailableVehiclesView());
+}
+
 }

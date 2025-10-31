@@ -20,5 +20,12 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
 
     @Query(value = "SELECT * FROM vehicle_dashboard_view", nativeQuery = true)
     List<Map<String, Object>> getVehicleViewData();
+
+    @Query(value = "SELECT * FROM vehicle_dashboard_view", nativeQuery = true)
+List<Map<String, Object>> getVehicleDashboardData();
+
+@Query(value = "SELECT * FROM View_Available_Vehicles", nativeQuery = true)
+List<Map<String, Object>> getAvailableVehiclesFromView();
+
 }
 
