@@ -11,17 +11,21 @@ import {
 import { Loader2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-// ✅ Define RentalAudit type based on backend view or table
-interface RentalAuditView {
-    id: number;
-    rentalId: number;
-    action: string;
-    changedBy: string;
-    changedAt: string;
+// ✅ Define vehicle type based on what your VIEW returns
+interface VehicleView {
+  type: string;
+  brand: string;
+  model: string;
+  registration: string;
+  daily_rate: number;
+  branch_name: string;
+  status: string;
 }
 
-export default function RentalAuditHistory() {
-    const [audits, setAudits] = useState<RentalAuditView[]>([]);
+
+
+export default function CustomerVehicles() {
+    const [vehicles, setVehicles] = useState<VehicleView[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -91,13 +95,26 @@ export default function RentalAuditHistory() {
                                 {audits.length > 0 ? (
                                     audits.map((audit, index) => (
                                         <TableRow key={index}>
-                                            <TableCell>{audit.id}</TableCell>
-                                            <TableCell>{audit.rentalId}</TableCell>
-                                            <TableCell>{audit.action}</TableCell>
-                                            <TableCell>{audit.changedBy}</TableCell>
-                                            <TableCell>
-                                                {new Date(audit.changedAt).toLocaleString()}
-                                            </TableCell>
+                                            <TableCell>{vehicle.type}</TableCell>
+<TableCell>{vehicle.brand}</TableCell>
+<TableCell>{vehicle.model}</TableCell>
+<TableCell>{vehicle.registration}</TableCell>
+<TableCell>
+  {vehicle.daily_rate.toLocaleString("en-LK", { style: "currency", currency: "LKR" })}
+</TableCell>
+<TableCell>{vehicle.branch_name}</TableCell>
+<TableCell>
+  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+    vehicle.status === "Available"
+      ? "bg-green-100 text-green-800"
+      : vehicle.status === "Rented"
+        ? "bg-blue-100 text-blue-800"
+        : "bg-yellow-100 text-yellow-800"
+  }`}>
+    {vehicle.status}
+  </span>
+</TableCell>
+
                                         </TableRow>
                                     ))
                                 ) : (

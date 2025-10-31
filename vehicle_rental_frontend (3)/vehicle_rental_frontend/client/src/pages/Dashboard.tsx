@@ -95,7 +95,7 @@ export default function Dashboard() {
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               Failed to load dashboard data. Please ensure the backend server is
-              running at {import.meta.env.VITE_API_URL || "http://localhost:8080"}
+              running at {import.meta.env.VITE_API_URL || "http://localhost:8080/"}
             </AlertDescription>
           </Alert>
         </div>

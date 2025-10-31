@@ -61,4 +61,9 @@ public class VehicleService {
     public List<Map<String, Object>> getVehicleView() {
         return vehicleRepo.getVehicleViewData();
     }
+
+    public List<Map<String, Object>> getAvailableVehiclesView() {
+    return vehicleRepo.getAvailableVehiclesFromView();
+}
+
 }

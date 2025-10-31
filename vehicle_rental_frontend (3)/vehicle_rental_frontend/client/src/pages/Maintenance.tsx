@@ -289,7 +289,7 @@ export default function Maintenance() {
                         {record.vehicle?.brand} {record.vehicle?.model}
                       </TableCell>
                       <TableCell>{record.maintenanceDate}</TableCell>
-                      <TableCell>${record.cost.toFixed(2)}</TableCell>
+                      <TableCell>{`LKR ${record.cost.toFixed(2)}`}</TableCell>
                       <TableCell>{record.nextServiceDate}</TableCell>
                       <TableCell className="max-w-xs truncate">
                         {record.description}

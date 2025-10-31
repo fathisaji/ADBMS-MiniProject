@@ -4,9 +4,13 @@ package com.vehiclerental.repository;
 import com.vehiclerental.entity.Rental;
 import com.vehiclerental.entity.RentalAudit;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @Repository
 public interface RentalRepository extends JpaRepository<Rental, Long> {
@@ -19,5 +23,13 @@ public interface RentalRepository extends JpaRepository<Rental, Long> {
 
     List<Rental> findByCustomerCustomerId(Long customerId);
 
+    @Query(value = "SELECT * FROM View_Active_Rentals", nativeQuery = true)
+    List<Map<String, Object>> getActiveRentalsFromView();
 
+    @Query(value = "SELECT CalcRentalAmount(:vehicleId, :rentDate, :returnDate)", nativeQuery = true)
+    Double calculateRentalAmount(
+        @Param("vehicleId") int vehicleId,
+        @Param("rentDate") LocalDate rentDate,
+        @Param("returnDate") LocalDate returnDate
+    );
 }

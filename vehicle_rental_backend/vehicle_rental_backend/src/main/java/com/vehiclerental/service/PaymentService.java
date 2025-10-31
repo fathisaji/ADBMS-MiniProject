@@ -1,43 +1,53 @@
 package com.vehiclerental.service;
 
-
 import com.vehiclerental.entity.Payment;
 import com.vehiclerental.repository.PaymentRepository;
 import org.springframework.stereotype.Service;
-
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
 public class PaymentService {
-    private final PaymentRepository paymentRepo;
 
-    public PaymentService(PaymentRepository paymentRepo) {
-        this.paymentRepo = paymentRepo;
+    private final PaymentRepository repo;
+
+    public PaymentService(PaymentRepository repo) {
+        this.repo = repo;
     }
 
-    public Payment createPayment(Payment payment) {
-        return paymentRepo.save(payment);
-    }
+    public List<Payment> getAll() { return repo.findAll(); }
 
-    public List<Payment> getAllPayments() {
-        return paymentRepo.findAll();
-    }
-
-    public Payment getPaymentById(Long id) {
-        return paymentRepo.findById(id)
+    public Payment getById(Long id) {
+        return repo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Payment not found"));
     }
 
-    public Payment updatePayment(Long id, Payment updatedPayment) {
-        Payment existing = getPaymentById(id);
-        existing.setAmount(updatedPayment.getAmount());
-        existing.setPaymentMethod(updatedPayment.getPaymentMethod());
-        existing.setPaymentDate(updatedPayment.getPaymentDate());
-        existing.setPaymentStatus(updatedPayment.getPaymentStatus());
-        return paymentRepo.save(existing);
+    @Transactional
+    public Payment create(Payment p) {
+        return repo.save(p);
     }
 
-    public void deletePayment(Long id) {
-        paymentRepo.deleteById(id);
+    @Transactional
+    public Payment update(Long id, Payment dto) {
+        Payment p = getById(id);
+        p.setAmount(dto.getAmount());
+        p.setPaymentMethod(dto.getPaymentMethod());
+        p.setPaymentDate(dto.getPaymentDate());
+        p.setPaymentStatus(dto.getPaymentStatus());
+        p.setTransactionId(dto.getTransactionId());
+        p.setSlipFileName(dto.getSlipFileName());
+        p.setPaymentDetails(dto.getPaymentDetails());
+        p.setAdminNotes(dto.getAdminNotes());
+        return repo.save(p);
+    }
+
+    @Transactional
+    public void delete(Long id) {
+        repo.deleteById(id);
+    }
+
+    /* Called by MySQL event through procedure */
+    public List<Payment> getPendingOnlinePayments() {
+        return repo.findPendingOnlinePayments();
     }
 }
