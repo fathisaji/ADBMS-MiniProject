@@ -21,9 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
-import { vehicleAPI, rentalAPI } from "@/lib/api"; // ✅ centralized API layer
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { vehicleAPI, rentalAPI, paymentAPI } from "@/lib/api";
 
 // ---------------------- INTERFACES ----------------------
 interface Vehicle {
@@ -70,7 +68,7 @@ const [totalAmount, setTotalAmount] = useState<number | null>(null);
 
   // 🔹 Fetch vehicles
   const { data: vehicles, loading: loadingVehicles } = useApi<Vehicle[]>(() =>
-    vehicleAPI.getAll()
+    vehicleAPI.getAvailable()
   );
 
   // 🔹 Fetch rentals depending on user role
@@ -80,73 +78,16 @@ const [totalAmount, setTotalAmount] = useState<number | null>(null);
       : rentalAPI.getAll()
   );
 
-  // 🔹 Fetch completed rentals from SQL VIEW
-  const [completedRentals, setCompletedRentals] = useState<CompletedRental[]>([]);
-  const [loadingCompleted, setLoadingCompleted] = useState(false);
-  const [errorCompleted, setErrorCompleted] = useState<string | null>(null);
-
-  const fetchCompletedRentals = async () => {
-    try {
-      setLoadingCompleted(true);
-      const data = await rentalAPI.getActiveFromView();
-      setCompletedRentals(data);
-      setErrorCompleted(null);
-    } catch (err) {
-      console.error(err);
-      setErrorCompleted("Failed to fetch completed rentals");
-    } finally {
-      setLoadingCompleted(false);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === "completed") fetchCompletedRentals();
-  }, [activeTab]);
-  useEffect(() => {
-  const fetchTotalAmount = async () => {
-    if (formData.vehicle?.vehicleId && formData.rentalDate && formData.returnDate) {
-      try {
-        const res = await rentalAPI.calculateAmount(
-          formData.vehicle.vehicleId,
-          formData.rentalDate,
-          formData.returnDate
-        );
-        setTotalAmount(res);
-      } catch (error) {
-        console.error("Failed to calculate amount:", error);
-        setTotalAmount(null);
-      }
-    }
-  };
-
-  fetchTotalAmount();
-}, [formData.vehicle?.vehicleId, formData.rentalDate, formData.returnDate]);
-
-
-  // 🔹 Create + Delete mutations
+  // 🔹 Create rental mutation
   const createMutation = useMutation((data: any) => rentalAPI.create(data));
   const deleteMutation = useMutation((id: number) => rentalAPI.delete(id));
-
-  if (!user) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground mt-2">
-          Loading user data...
-        </p>
-      </div>
-    );
-  }
+  const approveMutation = useMutation((id: number) => rentalAPI.approve(id));
 
   // ---------------------- FORM SUBMIT ----------------------
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (
-      !formData.vehicle?.vehicleId ||
-      !formData.rentalDate ||
-      !formData.returnDate
-    ) {
+    if (!formData.vehicle?.vehicleId || !formData.rentalDate || !formData.returnDate) {
       alert("Please fill all required fields.");
       return;
     }
@@ -154,7 +95,6 @@ const [totalAmount, setTotalAmount] = useState<number | null>(null);
     const rentalData = {
       ...formData,
       customer: { customerId: user.userId },
-      staff: { staffId: 1 },
       rentalStatus: "Pending",
     };
 
@@ -177,260 +117,190 @@ const [totalAmount, setTotalAmount] = useState<number | null>(null);
     }
   };
 
+  // ---------------------- APPROVE HANDLER (ADMIN) ----------------------
+  const handleApprove = async (rentalId: number) => {
+    try {
+      await approveMutation.execute(rentalId);
+      // Automatically create payment record after approval
+      await paymentAPI.create({
+        rental: { rentalId },
+        amount: 0, // Admin can edit later
+        paymentStatus: "Pending",
+        paymentMethod: "Cash",
+      });
+      alert("Rental approved and payment created!");
+      refetch();
+    } catch (err) {
+      console.error(err);
+      alert("Approval failed.");
+    }
+  };
+
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground mt-2">Loading user data...</p>
+      </div>
+    );
+  }
+
   // ---------------------- RENDER ----------------------
   return (
     <div className="space-y-6">
-      {/* Tabs */}
-      <div className="flex items-center space-x-3">
-        <Button
-          variant={activeTab === "my" ? "default" : "outline"}
-          onClick={() => setActiveTab("my")}
-        >
-          My Rentals
-        </Button>
-        <Button
-          variant={activeTab === "completed" ? "default" : "outline"}
-          onClick={() => setActiveTab("completed")}
-        >
-          Completed Rentals (View)
-        </Button>
+      {/* Header + New Rental Button */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">My Rentals</h1>
+          <p className="text-muted-foreground mt-2">
+            Request and track your vehicle rentals
+          </p>
+        </div>
+
+        {user.role === "CUSTOMER" && (
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button
+                onClick={() =>
+                  setFormData({ rentalDate: "", returnDate: "", rentalStatus: "Pending" })
+                }
+              >
+                <Plus className="mr-2 h-4 w-4" /> New Rental
+              </Button>
+            </DialogTrigger>
+
+            {/* Rental Form */}
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Request New Rental</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Vehicle Select */}
+                <div className="space-y-2">
+                  <Label htmlFor="vehicle">Vehicle</Label>
+                  <Select
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, vehicle: { vehicleId: parseInt(value) } })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select vehicle" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {loadingVehicles ? (
+                        <p className="text-center text-gray-400 py-2">Loading vehicles...</p>
+                      ) : (
+                        vehicles?.map((v) => (
+                          <SelectItem key={v.vehicleId} value={String(v.vehicleId)}>
+                            {v.brand} {v.model} ({v.registrationNo})
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Rental Dates */}
+                <div className="space-y-2">
+                  <Label htmlFor="rentalDate">Rental Date</Label>
+                  <Input
+                    type="date"
+                    id="rentalDate"
+                    value={formData.rentalDate || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, rentalDate: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="returnDate">Return Date</Label>
+                  <Input
+                    type="date"
+                    id="returnDate"
+                    value={formData.returnDate || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, returnDate: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+
+                <Button type="submit" disabled={createMutation.loading}>
+                  {createMutation.loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Requesting...
+                    </>
+                  ) : (
+                    "Submit Request"
+                  )}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
-      {/* ---------------------- MY RENTALS ---------------------- */}
-      {activeTab === "my" && (
-        <>
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">My Rentals</h1>
-              <p className="text-muted-foreground mt-2">
-                Request and track your vehicle rentals
-              </p>
-            </div>
-
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button
-                  onClick={() =>
-                    setFormData({
-                      rentalDate: "",
-                      returnDate: "",
-                      rentalStatus: "Pending",
-                    })
-                  }
-                >
-                  <Plus className="mr-2 h-4 w-4" /> New Rental
-                </Button>
-              </DialogTrigger>
-
-              {/* Rental Form */}
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Request New Rental</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  {/* Vehicle Select */}
-                  <div className="space-y-2">
-                    <Label htmlFor="vehicle">Vehicle</Label>
-                    <Select
-                      onValueChange={(value) =>
-                        setFormData({
-                          ...formData,
-                          vehicle: { vehicleId: parseInt(value) },
-                        })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select vehicle" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {loadingVehicles ? (
-                          <p className="text-center text-gray-400 py-2">
-                            Loading vehicles...
-                          </p>
-                        ) : (
-                          vehicles
-                            ?.filter((v) => v.availabilityStatus === "Available")
-                            .map((v) => (
-                              <SelectItem
-                                key={v.vehicleId}
-                                value={String(v.vehicleId)}
-                              >
-                                {v.brand} {v.model} ({v.registrationNo})
-                              </SelectItem>
-                            ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Rental Dates */}
-                  <div className="space-y-2">
-                    <Label htmlFor="rentalDate">Rental Date</Label>
-                    <Input
-                      type="date"
-                      id="rentalDate"
-                      value={formData.rentalDate || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, rentalDate: e.target.value })
-                      }
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="returnDate">Return Date</Label>
-                    <Input
-                      type="date"
-                      id="returnDate"
-                      value={formData.returnDate || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, returnDate: e.target.value })
-                      }
-                      required
-                    />
-                    {/* Total Amount Display */}
-                      {totalAmount !== null && (
-                        <div className="space-y-2">
-                          <Label>Total Amount (LKR)</Label>
-                          <Input type="text" value={totalAmount} readOnly className="font-semibold" />
-                        </div>
-                      )}
-                  </div>
-
-                  <Button type="submit" disabled={createMutation.loading}>
-                    {createMutation.loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />{" "}
-                        Requesting...
-                      </>
-                    ) : (
-                      "Submit Request"
-                    )}
-                  </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          {/* Rental List */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Rental Requests</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <p className="text-center text-gray-500 py-4">
-                  Loading rentals...
+      {/* Rental List */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Rental Requests</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <p className="text-center text-gray-500 py-4">Loading rentals...</p>
+          ) : rentals && rentals.length > 0 ? (
+            rentals.map((r) => (
+              <div key={r.rentalId} className="border p-3 rounded-lg mb-3 shadow-sm">
+                <p>
+                  <strong>Vehicle:</strong> {r.vehicle?.brand} {r.vehicle?.model}
                 </p>
-              ) : rentals && rentals.length > 0 ? (
-                rentals.map((r) => (
-                  <div
-                    key={r.rentalId}
-                    className="border p-3 rounded-lg mb-3 shadow-sm"
+                <p>
+                  <strong>Rental Period:</strong> {r.rentalDate} → {r.returnDate}
+                </p>
+                <p>
+                  <strong>Status:</strong>{" "}
+                  <span
+                    className={`font-semibold ${
+                      r.rentalStatus === "Pending"
+                        ? "text-yellow-600"
+                        : r.rentalStatus === "Approved"
+                        ? "text-green-600"
+                        : "text-gray-500"
+                    }`}
                   >
-                    <p>
-                      <strong>Vehicle:</strong> {r.vehicle?.brand}{" "}
-                      {r.vehicle?.model}
-                    </p>
-                    <p>
-                      <strong>Rental Period:</strong> {r.rentalDate} →{" "}
-                      {r.returnDate}
-                    </p>
-                    <p>
-                      <strong>Status:</strong>{" "}
-                      <span
-                        className={`font-semibold ${
-                          r.rentalStatus === "Pending"
-                            ? "text-yellow-600"
-                            : r.rentalStatus === "Approved"
-                            ? "text-green-600"
-                            : "text-gray-500"
-                        }`}
-                      >
-                        {r.rentalStatus}
-                      </span>
-                    </p>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(r.rentalId)}
-                      disabled={deleteMutation.loading}
-                      className="mt-2"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" /> Delete
-                    </Button>
-                  </div>
-                ))
-              ) : (
-                <p className="text-center text-gray-500 py-4">
-                  No rental requests yet.
+                    {r.rentalStatus}
+                  </span>
                 </p>
-              )}
-            </CardContent>
-          </Card>
-        </>
-      )}
 
-      {/* ---------------------- COMPLETED RENTALS (VIEW) ---------------------- */}
-      {activeTab === "completed" && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Completed Rentals (From SQL View)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loadingCompleted ? (
-              <p className="text-center text-gray-500 py-4">
-                Loading completed rentals...
-              </p>
-            ) : errorCompleted ? (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{errorCompleted}</AlertDescription>
-              </Alert>
-            ) : completedRentals.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm border">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th className="p-2 border">Rental ID</th>
-                      <th className="p-2 border">Customer</th>
-                      <th className="p-2 border">Brand</th>
-                      <th className="p-2 border">Model</th>
-                      <th className="p-2 border">Rental Date</th>
-                      <th className="p-2 border">Return Date</th>
-                      <th className="p-2 border">Total</th>
-                      <th className="p-2 border">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {completedRentals.map((r) => (
-                      <tr key={r.Rental_ID}>
-                        <td className="p-2 border">{r.Rental_ID}</td>
-                        <td className="p-2 border">{r.Customer_Name}</td>
-                        <td className="p-2 border">{r.Brand}</td>
-                        <td className="p-2 border">{r.Model}</td>
-                        <td className="p-2 border">{r.Rental_Date}</td>
-                        <td className="p-2 border">{r.Return_Date}</td>
-                        <td className="p-2 border">{r.Total_Amount}</td>
-                        <td className="p-2 border font-semibold text-green-600">
-                          {r.Rental_Status}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                {user.role === "ADMIN" && r.rentalStatus === "Pending" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleApprove(r.rentalId)}
+                    className="mt-2 mr-2"
+                  >
+                    Approve
+                  </Button>
+                )}
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDelete(r.rentalId)}
+                  className="mt-2"
+                  disabled={deleteMutation.loading}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" /> Delete
+                </Button>
               </div>
-              
-            ) : (
-              <p className="text-center text-gray-500 py-4">
-                No completed rentals found.
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      )}
-      
+            ))
+          ) : (
+            <p className="text-center text-gray-500 py-4">No rental requests yet.</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -107,17 +107,107 @@ export const staffAPI = {
 export const paymentAPI = {
   getAll: () => apiCall<any[]>("/payments"),
   getById: (id: number) => apiCall<any>(`/payments/${id}`),
+  
+  // Create payment
   create: (data: any) => apiCall<any>("/payments", {
     method: "POST",
     body: JSON.stringify(data),
   }),
+  
+  // Update payment (status, admin notes, etc.)
   update: (id: number, data: any) => apiCall<any>(`/payments/${id}`, {
     method: "PUT",
     body: JSON.stringify(data),
   }),
+  
+  // Delete payment
   delete: (id: number) => apiCall<void>(`/payments/${id}`, {
     method: "DELETE",
   }),
+  
+  // Get payments by user/customer
+  getByUser: (userId: number) => apiCall<any[]>(`/payments/user/${userId}`),
+  
+  // Upload payment slip - FIXED: uses paymentId instead of rentalId
+  uploadSlip: (paymentId: number, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return fetch(`${API_BASE_URL}/payments/${paymentId}/upload-slip`, {
+      method: "POST",
+      body: formData,
+    }).then(async (res) => {
+      if (!res.ok) {
+        const error = await res.text();
+        throw new Error(`Upload failed: ${res.status} - ${error}`);
+      }
+      return res.json();
+    });
+  },
+  
+  // Download payment slip - FIXED: better error handling
+  downloadSlip: async (paymentId: number) => {
+    const response = await fetch(`${API_BASE_URL}/payments/${paymentId}/download-slip`);
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.status} - ${response.statusText}`);
+    }
+    
+    const blob = await response.blob();
+    
+    // Extract filename from response headers if available
+    const contentDisposition = response.headers.get('content-disposition');
+    let filename = `payment-slip-${paymentId}`;
+    
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+      if (filenameMatch) {
+        filename = filenameMatch[1];
+      }
+    }
+    
+    // Create download link and trigger download
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  },
+  
+  // Update payment status (admin function)
+  updateStatus: (paymentId: number, status: string, adminNotes?: string) => 
+    apiCall<any>(`/payments/${paymentId}/status`, {
+      method: "PUT",
+      body: JSON.stringify({ status, adminNotes }),
+    }),
+};
+
+// ==================== BANK ACCOUNT ENDPOINTS ====================
+export const bankAccountAPI = {
+  getAll: () => apiCall<any[]>("/bank-accounts"),
+  getById: (id: number) => apiCall<any>(`/bank-accounts/${id}`),
+  getActive: () => apiCall<any[]>("/bank-accounts/active"),
+  
+  create: (data: any) => apiCall<any>("/bank-accounts", {
+    method: "POST",
+    body: JSON.stringify(data),
+  }),
+  
+  update: (id: number, data: any) => apiCall<any>(`/bank-accounts/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  }),
+  
+  delete: (id: number) => apiCall<void>(`/bank-accounts/${id}`, {
+    method: "DELETE",
+  }),
+  
+  toggleStatus: (id: number, isActive: boolean) => 
+    apiCall<any>(`/bank-accounts/${id}/status`, {
+      method: "PUT",
+      body: JSON.stringify({ isActive }),
+    }),
 };
 
 
@@ -125,37 +215,42 @@ export const rentalAPI = {
   getAll: () => apiCall<any[]>("/rentals"),
   getById: (id: number) => apiCall<any>(`/rentals/${id}`),
 
-  // ✅ Create new rental request (customer)
+  // Create new rental request (customer)
   create: (data: any) => apiCall<any>("/rentals", {
     method: "POST",
     body: JSON.stringify(data),
   }),
 
-  // ✅ Get rentals by customer (used in CustomerRentals page)
+  // Get rentals by customer (used in CustomerRentals page)
   getByUser: (userId: number) => apiCall<any[]>(`/rentals/user/${userId}`),
 
-  // ✅ Admin approval or rejection of a rental request
+  // Admin approval or rejection of a rental request
   approve: (id: number) => apiCall<any>(`/rentals/${id}/approve`, {
     method: "PUT",
   }),
-  reject: (id: number) => apiCall<any>(`/rentals/${id}/reject`, {
+  
+  reject: (id: number, reason?: string) => apiCall<any>(`/rentals/${id}/reject`, {
     method: "PUT",
+    body: JSON.stringify({ reason }),
   }),
 
-  // ✅ Customer uploads payment proof
+  // FIXED: Better file upload with error handling
   uploadPaymentProof: (rentalId: number, file: File) => {
     const formData = new FormData();
     formData.append("file", file);
     return fetch(`${API_BASE_URL}/rentals/${rentalId}/upload-proof`, {
       method: "POST",
       body: formData,
-    }).then((res) => {
-      if (!res.ok) throw new Error(`Upload failed: ${res.statusText}`);
+    }).then(async (res) => {
+      if (!res.ok) {
+        const error = await res.text();
+        throw new Error(`Upload failed: ${res.status} - ${error}`);
+      }
       return res.json();
     });
   },
 
-  // ✅ Complete rental (optional, marks as finished)
+  // Complete rental (optional, marks as finished)
   complete: (id: number) => apiCall<any>(`/rentals/${id}/complete`, {
     method: "POST",
   }),
